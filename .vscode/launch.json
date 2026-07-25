@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb-dap",
+      "request": "launch",
+      "name": "Debug Zig Sysmon",
+      "program": "${workspaceFolder}/zig-out/bin/zig_sysmon",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "stopOnEntry": false,
+      "preLaunchTask": "zig build"
+    }
+  ]
+}
