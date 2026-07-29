@@ -1,8 +1,10 @@
 const std = @import("std");
 
 const info = @import("os/info.zig");
+const Config = @import("types/config.zig").Config;
 
 pub fn main(init: std.process.Init) !void {
+    _ = try Config.load(init.minimal.args, init.minimal.environ);
     const io = init.io;
     const metrics = try info.getMetrics(io);
     const hostname = std.mem.sliceTo(&metrics.hostname, 0);

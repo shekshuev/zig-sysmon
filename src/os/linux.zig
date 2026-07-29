@@ -3,7 +3,7 @@ const posix = std.posix;
 const Io = std.Io;
 const testing = std.testing;
 
-const SystemMetrics = @import("../metrics/types.zig").SystemMetrics;
+const SystemMetrics = @import("../types/system_metrics.zig").SystemMetrics;
 
 pub fn getMetrics(io: Io) !SystemMetrics {
     var hostname_buf: [posix.HOST_NAME_MAX]u8 = [_]u8{0} ** posix.HOST_NAME_MAX;
@@ -27,6 +27,10 @@ pub fn getMetrics(io: Io) !SystemMetrics {
         .os_release = os_release,
         .kern_version = kern_version.release,
     };
+}
+
+pub fn getEnviron(environ: std.process.Environ, key: []const u8) ?[]const u8 {
+    return environ.getPosix(key);
 }
 
 fn getTotalMemory(io: Io) !u64 {
@@ -89,6 +93,37 @@ fn parseOsRelease(content: []const u8) [64]u8 {
         @memcpy(result[0..copy_len], clear_name[0..copy_len]);
     }
     return result;
+}
+
+test "parseUptime should return zero if value not presented" {
+    const proc_uptime = " 18714.00";
+    const result = parseUptime(proc_uptime);
+
+    const expected = 0;
+    try testing.expectEqual(expected, result);
+}
+
+test "parseUptime should correctly ejects uptime float value" {
+    const proc_uptime = "1307.63 18714.00";
+    const result = parseUptime(proc_uptime);
+
+    const expected = 1307;
+    try testing.expectEqual(expected, result);
+}
+
+test "parseUptime should return zero if empty string passed as content" {
+    const proc_uptime = "";
+    const result = parseUptime(proc_uptime);
+
+    const expected = 0;
+    try testing.expectEqual(expected, result);
+}
+
+test "parseUptime should return zero if value before space is not a float" {
+    const proc_uptime = "corrupted_value 18714.00";
+    const result = parseUptime(proc_uptime);
+
+    try testing.expectEqual(0, result);
 }
 
 test "parseMeminfoValueByKey should correctly eject MemTotal in bytes" {
@@ -235,4 +270,12 @@ test "parseOsRelease should correctly parse release name when content doesn't co
     const release_str = std.mem.sliceTo(&result, 0);
     const expected_release = "Ubuntu 25.10";
     try testing.expectEqualStrings(expected_release, release_str);
+}
+
+test "parseOsRelease should return zero-filled buffer if PRETTY_NAME is empty string" {
+    const mock_os_release = "PRETTY_NAME=\"\"";
+    const result = parseOsRelease(mock_os_release);
+    const expected: [64]u8 = [_]u8{0} ** 64;
+
+    try testing.expectEqual(expected, result);
 }

@@ -2,7 +2,7 @@ const std = @import("std");
 const posix = std.posix;
 const Io = std.Io;
 
-const SystemMetrics = @import("../metrics/types.zig").SystemMetrics;
+const SystemMetrics = @import("../types/system_metrics.zig").SystemMetrics;
 
 const CTL_HW = 6;
 const CTL_KERN = 1;
@@ -47,4 +47,8 @@ pub fn getMetrics(io: Io) !SystemMetrics {
         .os_release = os_release_buf,
         .kern_version = kern_version,
     };
+}
+
+pub fn getEnviron(environ: std.process.Environ, key: []const u8) ?[]const u8 {
+    return environ.getPosix(key);
 }
