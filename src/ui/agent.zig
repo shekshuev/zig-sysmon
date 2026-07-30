@@ -44,6 +44,11 @@ pub const AppModel = struct {
     pub fn view(self: *const AppModel, ctx: *const zigzag.Context) []const u8 {
         const alloc = ctx.allocator;
 
+        if (self.shared_state.getError(self.io) catch null) |err| {
+            const err_msg = std.fmt.allocPrint(alloc, "Error: {s}", .{@errorName(err)}) catch "Error occurred";
+            return zigzag.place.place(alloc, ctx.width, ctx.height, .left, .top, err_msg) catch "Layout error";
+        }
+
         if (self.metrics) |m| {
             const host = std.mem.sliceTo(&m.hostname, 0);
             const os_rel = std.mem.sliceTo(&m.os_release, 0);
@@ -70,17 +75,17 @@ pub const AppModel = struct {
             const mins = (m.uptime_secs % 3600) / 60;
 
             const content = std.fmt.allocPrint(alloc,
-                \\  SYS-MONITOR (ZIGZAG)
-                \\  ─────────────────────────────────────
+                \\  SYS-MONITOR
+                \\  ──────────────────────────────────────
                 \\  Host:       {s}
                 \\  OS:         {s}
                 \\  Kernel:     {s}
                 \\  CPU Cores:  {d}
                 \\  Uptime:     {d}h {d}m
-                \\  ─────────────────────────────────────
+                \\  ──────────────────────────────────────
                 \\  Memory:     {d}/{d} GB
                 \\  {s}
-                \\  ─────────────────────────────────────
+                \\  ──────────────────────────────────────
                 \\  [q] Quit
             , .{
                 host,
