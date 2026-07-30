@@ -20,6 +20,10 @@ pub fn getEnviron(environ: std.process.Environ, key: []const u8) ?[]const u8 {
     return impl.getEnviron(environ, key);
 }
 
+pub fn waitForSignal() void {
+    return impl.waitForSignal();
+}
+
 test {
     _ = impl;
 }

@@ -5,22 +5,14 @@ const Config = @import("types/config.zig").Config;
 
 var keep_running = std.atomic.Value(bool).init(true);
 
-extern "c" fn sigwait(set: *const std.posix.sigset_t, sig: *c_int) c_int;
-
 pub fn main(init: std.process.Init) !void {
     const config = try Config.load(init.minimal.args, init.minimal.environ);
     const io = init.io;
 
-    var mask = std.mem.zeroes(std.posix.sigset_t);
-    std.posix.sigaddset(&mask, std.posix.SIG.INT);
-    std.posix.sigaddset(&mask, std.posix.SIG.TERM);
-    std.posix.sigprocmask(std.posix.SIG.BLOCK, &mask, null);
-
     var future = io.async(runAgent, .{ io, config });
     defer _ = future.cancel(io) catch {};
 
-    var sig: c_int = 0;
-    _ = sigwait(&mask, &sig);
+    info.waitForSignal();
 
     std.debug.print("\nReleasing resources...\n", .{});
 

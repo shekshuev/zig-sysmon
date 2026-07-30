@@ -10,6 +10,8 @@ const HW_MODEL = 2;
 const HW_MEMSIZE = 24;
 const KERN_BOOTTIME = 21;
 
+extern "c" fn sigwait(set: *const std.posix.sigset_t, sig: *c_int) c_int;
+
 pub fn getMetrics(io: Io) !SystemMetrics {
     var hostname_buf: [posix.HOST_NAME_MAX]u8 = [_]u8{0} ** posix.HOST_NAME_MAX;
     _ = try posix.gethostname(&hostname_buf);
@@ -57,4 +59,14 @@ pub fn getMetrics(io: Io) !SystemMetrics {
 
 pub fn getEnviron(environ: std.process.Environ, key: []const u8) ?[]const u8 {
     return environ.getPosix(key);
+}
+
+pub fn waitForSignal() void {
+    var mask = std.mem.zeroes(std.posix.sigset_t);
+    std.posix.sigaddset(&mask, std.posix.SIG.INT);
+    std.posix.sigaddset(&mask, std.posix.SIG.TERM);
+    std.posix.sigprocmask(std.posix.SIG.BLOCK, &mask, null);
+
+    var sig: c_int = 0;
+    _ = sigwait(&mask, &sig);
 }
