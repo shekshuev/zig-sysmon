@@ -16,6 +16,10 @@ pub fn getMetrics(io: Io) !SystemMetrics {
 
     const cpu_count = try std.Thread.getCpuCount();
     const kern_version = posix.uname();
+    var kern_buf: [64]u8 = [_]u8{0} ** 64;
+    const release_str = std.mem.sliceTo(&kern_version.release, 0);
+    const copy_len = @min(release_str.len, kern_buf.len);
+    @memcpy(kern_buf[0..copy_len], release_str[0..copy_len]);
 
     var mib = [_]c_int{ CTL_HW, HW_MEMSIZE };
     var ram_bytes: u64 = 0;
@@ -42,10 +46,12 @@ pub fn getMetrics(io: Io) !SystemMetrics {
     return SystemMetrics{
         .hostname = hostname_buf,
         .ram_total = ram_bytes,
-        .cpu_cores = cpu_count,
+        .cpu_cores = @intCast(cpu_count),
         .uptime_secs = uptime_seconds,
         .os_release = os_release_buf,
-        .kern_version = kern_version,
+        .kern_version = kern_buf,
+        // TODO: count later
+        .ram_available = 0,
     };
 }
 
