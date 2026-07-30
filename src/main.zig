@@ -2,7 +2,10 @@ const std = @import("std");
 
 const info = @import("os/info.zig");
 const zigzag = @import("zigzag");
-const AppModel = @import("ui/agent.zig").AppModel;
+const agent = @import("agent.zig");
+const server = @import("server.zig");
+const agent_ui = @import("ui/agent.zig");
+const server_ui = @import("ui/server.zig");
 const Config = @import("types/config.zig").Config;
 const SharedState = @import("types/shared_state.zig").SharedState;
 
@@ -19,19 +22,31 @@ pub fn main(init: std.process.Init) !void {
 
     var state: SharedState = .{};
 
-    var future = io.async(runAgent, .{ io, config, &state });
+    var future = io.async(runWorker, .{ io, config, &state });
     defer _ = future.cancel(io) catch {};
 
-    var program = zigzag.Program(AppModel).init(init.gpa, init.io, init.environ_map);
-    defer program.deinit();
-
-    program.model.shared_state = &state;
-    program.model.io = io;
-
-    try program.run();
+    switch (config.mode) {
+        .agent => {
+            var program = agent_ui.init(init.gpa, io, init.environ_map, &state);
+            defer program.deinit();
+            try program.run();
+        },
+        .server => {
+            var program = server_ui.init(init.gpa, io, init.environ_map, &state);
+            defer program.deinit();
+            try program.run();
+        },
+    }
 
     _ = try future.cancel(io);
     _ = try future.await(io);
+}
+
+fn runWorker(io: std.Io, config: Config, state: *SharedState) anyerror!void {
+    switch (config.mode) {
+        .agent => try agent.run(io, config, state),
+        .server => try server.run(io, config, state),
+    }
 }
 
 fn printUsage() void {
@@ -48,21 +63,6 @@ fn printUsage() void {
         \\  -i, --interval <SECS>   Metrics retrieval interval in seconds (default: 2)
         \\
     , .{});
-}
-
-fn runAgent(io: std.Io, config: Config, state: *SharedState) !void {
-    while (true) {
-        try state.clearError(io);
-        io.sleep(.fromSeconds(config.interval_secs), .awake) catch |err| {
-            try state.setError(io, err);
-            break;
-        };
-        const metrics = info.getMetrics(io) catch |err| {
-            try state.setError(io, err);
-            continue;
-        };
-        try state.set(io, metrics);
-    }
 }
 
 test {

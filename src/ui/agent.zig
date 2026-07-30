@@ -4,7 +4,19 @@ const zigzag = @import("zigzag");
 const SystemMetrics = @import("../types/system_metrics.zig").SystemMetrics;
 const SharedState = @import("../types/shared_state.zig").SharedState;
 
-pub const AppModel = struct {
+pub fn init(
+    allocator: std.mem.Allocator,
+    io: std.Io,
+    env: *std.process.Environ.Map,
+    state: *SharedState,
+) zigzag.Program(AppModel) {
+    var program = zigzag.Program(AppModel).init(allocator, io, env);
+    program.model.shared_state = state;
+    program.model.io = io;
+    return program;
+}
+
+const AppModel = struct {
     shared_state: *SharedState = undefined,
     io: std.Io = undefined,
     metrics: ?SystemMetrics = null,
@@ -75,7 +87,7 @@ pub const AppModel = struct {
             const mins = (m.uptime_secs % 3600) / 60;
 
             const content = std.fmt.allocPrint(alloc,
-                \\  SYS-MONITOR
+                \\  SYS-MONITOR AGENT
                 \\  ──────────────────────────────────────
                 \\  Host:       {s}
                 \\  OS:         {s}
